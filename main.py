@@ -27,32 +27,19 @@ get_raw_data()
 def isolation_forest_process():  # 使用孤立森林算法处理源数据，删除异常值
     global df
     df = pd.read_excel(r'raw_data.xlsx', dtype={'基金代码_FdCd': 'object'})
-    # 切分数据
-    df_even = df[df.index % 2 == 0]  # 偶数行
-    df_odd = df[df.index % 2 == 1]  # 奇数行
-    print(df_odd)
-    print(df_even)
     # 生成训练数据
     rng = np.random.RandomState(89)  # 指定随机种子
-    X_train = df_even.drop(columns=['基金代码_FdCd'])  # 删除基金代码列，防止基金代码对孤立森林算法产生影响
-    X_test = df_odd.drop(columns=['基金代码_FdCd'])  # 删除基金代码列，防止基金代码对孤立森林算法产生影响
+    X_train = df.drop(columns=['基金代码_FdCd'])  # 删除基金代码列，防止基金代码对孤立森林算法产生影响
+    X_test = df.drop(columns=['基金代码_FdCd'])  # 删除基金代码列，防止基金代码对孤立森林算法产生影响
     # 拟合模型
     clf = IsolationForest(random_state=rng, contamination=0.04)  # 设定异常值比例为0.04
     clf.fit(X_train)  # 使用训练集进行模型训练
     # 预测
-    y_predict_train = clf.predict(X_train)
     y_predict_test = clf.predict(X_test)
     # 合并预测结果
     predict_res = []
-    if len(y_predict_test) == len(y_predict_train):  # 训练集与测试集一样大的时候直接合并
-        for i in range(len(y_predict_test)):
-            predict_res.append(y_predict_train[i])
-            predict_res.append(y_predict_test[i])
-    else:
-        for i in range(len(y_predict_test)):  # 训练集与测试集不一样大的时候将训练集多出来的一个数据加入列表
-            predict_res.append(y_predict_train[i])
-            predict_res.append(y_predict_test[i])
-        predict_res.append(y_predict_train[len(y_predict_test)])
+    for i in range(len(y_predict_test)):
+        predict_res.append(y_predict_test[i])
     # 根据预测结果进行异常值舍弃
     for idx in range(len(predict_res)):
         if predict_res[idx] == -1:
@@ -131,13 +118,13 @@ def get_all_kind_data():
                 ['周均日beta值', '一周回报率(%)_RRInSinWk', '六个月回报率(%)_RRInSixMon', '从业人员持有率',
                  '基金份额变化(份)_ShrChg']]
             max_val = _['周均日beta值'].max()
-            _['周均日beta值'] = max_val - _['周均日beta值']
+            _.loc[:, '周均日beta值'] = max_val - _['周均日beta值']
         else:
             _ = data_in[
                 ['半年均beta值', '一周回报率(%)_RRInSinWk', '六个月回报率(%)_RRInSixMon', '从业人员持有率',
                  '基金份额变化(份)_ShrChg']]
             max_val = _['半年均beta值'].max()
-            _['半年均beta值'] = max_val - _['半年均beta值']
+            _.loc[:, '半年均beta值'] = max_val - _['半年均beta值']
         # Perform TOPSIS analysis on the selected data using the calculated weight
         out, idiom, weight_list = topsis(_, weight[index])
         # Combine the results with the code of each fund
@@ -165,4 +152,5 @@ def get_main():
     final.to_excel(f'answer_for_all.xlsx', index=False)
 
 
+get_all_kind_data()
 get_main()
